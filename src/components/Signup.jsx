@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 
 function Signup({ isDirectSignup }) {
   const navigate = useNavigate();
@@ -11,18 +11,75 @@ function Signup({ isDirectSignup }) {
     phone: '',
     facility: ''
   });
+  const [errors, setErrors] = useState({});
+
+  const validateEmail = (email) => {
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return re.test(email);
+  };
+
+  const formatPhoneNumber = (value) => {
+    // Remove all non-digits
+    const digits = value.replace(/\D/g, '');
+    
+    // Format as (XXX) XXX-XXXX
+    if (digits.length <= 3) return digits;
+    if (digits.length <= 6) return `(${digits.slice(0,3)}) ${digits.slice(3)}`;
+    return `(${digits.slice(0,3)}) ${digits.slice(3,6)}-${digits.slice(6,10)}`;
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
+    
+    if (name === 'phone') {
+      // Only allow numbers and limit to 10 digits
+      const digits = value.replace(/\D/g, '');
+      if (digits.length <= 10) {
+        setFormData(prev => ({
+          ...prev,
+          [name]: digits
+        }));
+      }
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        [name]: value
+      }));
+    }
+
+    // Clear error when user starts typing
+    if (errors[name]) {
+      setErrors(prev => ({
+        ...prev,
+        [name]: ''
+      }));
+    }
+  };
+
+  const validateForm = () => {
+    const newErrors = {};
+    
+    // Validate email
+    if (!validateEmail(formData.email)) {
+      newErrors.email = 'Please enter a valid email address';
+    }
+    
+    // Validate phone (must be exactly 10 digits)
+    if (formData.phone.length !== 10) {
+      newErrors.phone = 'Please enter a valid 10-digit phone number';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     
+    if (!validateForm()) {
+      return;
+    }
+
     console.log('Form Data:', formData);
     console.log('Is Direct Signup:', isDirectSignup);
     console.log('URL Search:', window.location.search);
@@ -37,7 +94,7 @@ function Signup({ isDirectSignup }) {
       'Source 2': 'Is well water or aquifer access at risk?',
       'Usage 1': 'Are hidden water inefficiencies draining resources?',
       'Usage 2': 'Is water conservation a priority for your operation?',
-      'Usage 3': 'Are you interested in ZLD/ZLW?',
+      'Usage 3': 'Are you interested in ZLD/ZLW? LLW?',
       'Disposal 1': 'Do General Order requirements feel overwhelming?',
       'Disposal 2': 'Rising hauling fees giving you anxiety?',
       'Disposal 3': 'Is your lagoon imperiled?'
@@ -107,13 +164,15 @@ function Signup({ isDirectSignup }) {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-200 to-white p-6">
       <div className="max-w-md mx-auto mb-6">
-        <img 
-          src="/RWS-Logo-white.png" 
-          alt="RWS Logo" 
-          className="h-16 w-auto mx-auto"
-        />
+        <Link to="/" className="block">
+          <img 
+            src="/RWS-Logo-RGB.png" 
+            alt="RWS Logo" 
+            className="h-16 w-auto mx-auto hover:opacity-90 transition-opacity duration-200"
+          />
+        </Link>
       </div>
-      
+
       <div className="max-w-md mx-auto bg-blue-50 rounded-xl shadow-lg p-8">
         <h2 className="text-2xl font-bold mb-6 text-center">
           When do you prefer to schedule your Water Risk Assessment?
@@ -168,6 +227,7 @@ function Signup({ isDirectSignup }) {
               onChange={handleInputChange}
               className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               required
+              style={{ touchAction: 'manipulation' }}
             />
           </div>
 
@@ -180,9 +240,15 @@ function Signup({ isDirectSignup }) {
               name="email"
               value={formData.email}
               onChange={handleInputChange}
-              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                errors.email ? 'border-red-500' : ''
+              }`}
               required
+              style={{ touchAction: 'manipulation' }}
             />
+            {errors.email && (
+              <p className="text-red-500 text-sm mt-1">{errors.email}</p>
+            )}
           </div>
 
           <div className="mb-4">
@@ -194,9 +260,16 @@ function Signup({ isDirectSignup }) {
               name="phone"
               value={formData.phone}
               onChange={handleInputChange}
-              className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 ${
+                errors.phone ? 'border-red-500' : ''
+              }`}
               required
+              style={{ touchAction: 'manipulation' }}
+              inputMode="numeric"
             />
+            {errors.phone && (
+              <p className="text-red-500 text-sm mt-1">{errors.phone}</p>
+            )}
           </div>
 
           <div className="mb-6">
@@ -210,12 +283,15 @@ function Signup({ isDirectSignup }) {
               onChange={handleInputChange}
               className="w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
               required
+              style={{ touchAction: 'manipulation' }}
             />
           </div>
 
           <button
             type="submit"
             className="w-full bg-blue-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            style={{ touchAction: 'manipulation' }}
+            onTouchStart={(e) => e.preventDefault()}
           >
             Submit
           </button>
@@ -234,7 +310,6 @@ function Signup({ isDirectSignup }) {
       </div>
     </div>
   );
-
 }
 
 export default Signup;

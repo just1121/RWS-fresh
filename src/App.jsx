@@ -1,9 +1,22 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, useNavigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useNavigate, Navigate, Outlet, Link } from 'react-router-dom';
 import PainPoints from './components/PainPoints';
 import Modal from './components/Modal';
 import Signup from './components/Signup';
 import Confirmation from './components/Confirmation';
+
+// Logo component with link
+const LogoWithLink = () => (
+  <div className="max-w-md mx-auto mb-6">
+    <Link to="/">
+      <img 
+        src="/RWS-Logo-RGB.png" 
+        alt="RWS Logo" 
+        className="h-16 w-auto mx-auto hover:opacity-90 transition-opacity duration-200"
+      />
+    </Link>
+  </div>
+);
 
 function AppContent() {
   const navigate = useNavigate();
@@ -16,6 +29,25 @@ function AppContent() {
   const [smsSent, setSmsSent] = useState(false);
   const [phoneNumber, setPhoneNumber] = useState('');
   const [showPhoneInput, setShowPhoneInput] = useState(false);
+  const [showAboutPopup, setShowAboutPopup] = useState(false);
+
+  useEffect(() => {
+    const handleNavigation = () => {
+      const path = window.location.pathname;
+      if (!['/painpoints', '/signup', '/confirmation', '/'].includes(path)) {
+        navigate('/', { replace: true });
+      }
+      if (path === '/') {
+        setCurrentPage(1);
+        setShowStayConnected(false);
+      }
+    };
+
+    handleNavigation();
+    window.addEventListener('popstate', handleNavigation);
+    
+    return () => window.removeEventListener('popstate', handleNavigation);
+  }, [navigate]);
 
   const toggleOption = (option) => {
     if (selectedOptions.includes(option)) {
@@ -28,15 +60,7 @@ function AppContent() {
   const PageOne = () => (
     <>
       <h2 className="text-2xl font-bold mb-6 text-center">
-        Take 20 seconds to learn more about{' '}
-        <span 
-          className="relative inline-block cursor-pointer group"
-          onMouseEnter={() => setIsHovering(true)}
-          onMouseLeave={() => setIsHovering(false)}
-        >
-          our*
-          {isHovering && <InfoPopup />}
-        </span>{' '}
+        Take 20 seconds to learn more about our*{' '}
         <span className="relative inline-block">
           <span className="text-black">FREE</span>
           <span 
@@ -47,15 +71,16 @@ function AppContent() {
             }}
           ></span>
         </span>{' '}
-        Water Risk Assessment for your winery or water facility.
+        Water Risk Assessment for your winery or beverage facility.
       </h2>
 
       <div className="space-y-4">
         <button 
           onClick={() => setShowStayConnected(true)}
-          className="w-full p-2 rounded-lg text-sm text-gray-500 hover:bg-gray-50"
+          className="w-full p-2 rounded-lg text-sm text-gray-500 hover:bg-gray-50 active:bg-gray-100"
           style={{ 
-            border: '1px solid rgb(86,177,223)'
+            border: '1px solid rgb(86,177,223)',
+            touchAction: 'manipulation'
           }}
         >
           Thanks, but our winery has perfect water balance.
@@ -66,17 +91,24 @@ function AppContent() {
             setCurrentPage(2);
             navigate('/painpoints');
           }} 
-          className="w-full p-2 rounded-lg text-white font-semibold hover:opacity-90"
-          style={{ backgroundColor: 'rgb(86,177,223)' }}
+          className="w-full p-2 rounded-lg text-white font-semibold hover:opacity-90 active:opacity-80"
+          style={{ 
+            backgroundColor: 'rgb(86,177,223)',
+            touchAction: 'manipulation'
+          }}
         >
           Sure, I have 20 seconds to learn more...
         </button>
 
         <div className="text-left mt-2">
           <span 
-            className="text-sm text-gray-500 cursor-pointer font-semibold"
+            className="relative inline-block text-sm text-gray-500 cursor-pointer"
             onMouseEnter={() => setIsHovering(true)}
             onMouseLeave={() => setIsHovering(false)}
+            onTouchStart={() => setIsHovering(true)}
+            onTouchEnd={() => setIsHovering(false)}
+            onClick={() => setIsHovering(!isHovering)}
+            style={{ touchAction: 'manipulation' }}
           >
             * About RWS
             {isHovering && <InfoPopup />}
@@ -97,37 +129,20 @@ function AppContent() {
       }
     }, [selectedOptions]);
 
-    return (
-      <>
-        <button 
-          onClick={() => setCurrentPage(1)}
-          className="mb-4 text-blue-600 hover:text-blue-800 flex items-center"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L4.414 9H17a1 1 0 110 2H4.414l5.293 5.293a1 1 0 010 1.414z" clipRule="evenodd" />
-          </svg>
-          Back
-        </button>
-
-        <p className="text-sm text-gray-500 text-center mb-4">
-          Select all that apply or are adjacent to your needs
-        </p>
-      </>
-    );
+    return null;
   };
 
   const StayConnectedPage = () => {
     useEffect(() => {
-      if (hasConsent && smsSent) {
+      if (hasConsent) {
         const timer = setTimeout(() => {
           setShowStayConnected(false);
           setCurrentPage(1);
           setHasConsent(false);
-          setSmsSent(false);
         }, 5000);
         return () => clearTimeout(timer);
       }
-    }, [hasConsent, smsSent]);
+    }, [hasConsent]);
 
     return (
       <div className="text-center">
@@ -135,38 +150,57 @@ function AppContent() {
         
         <div className="space-y-6">
           <div className="space-y-4">
-            <div className="space-y-2">
+            <div className="flex flex-col space-y-4 items-center">
               <div 
-                onClick={() => {
-                  if (hasConsent) {
-                    setShowPhoneInput(true);
-                  }
-                }}
-                className={`w-full text-left pl-4 ${
-                  hasConsent 
-                    ? 'text-blue-500 hover:text-blue-600 cursor-pointer' 
-                    : 'text-gray-300 cursor-not-allowed'
-                }`}
+                className="flex items-center space-x-2 w-48 px-4 py-2 rounded-lg bg-white hover:bg-gray-50 border border-gray-200 active:bg-gray-100"
+                style={{ touchAction: 'manipulation' }}
               >
-                → Text Me Contact Info
+                <img 
+                  src="/vcard-icon.png" 
+                  alt="vCard" 
+                  className="h-8 w-8"
+                />
+                <a 
+                  href="/eric-dahlberg.vcf" 
+                  download
+                  className="text-blue-500 hover:text-blue-600 active:text-blue-700"
+                  style={{ touchAction: 'manipulation' }}
+                  onTouchStart={(e) => e.preventDefault()}
+                >
+                  Download vCard
+                </a>
               </div>
-              
-              <p 
-                className="text-sm text-gray-600 pl-8 cursor-pointer text-left"
-                onClick={() => setHasConsent(!hasConsent)}
-                style={{ textAlign: 'left' }}
-              >
-                By clicking here, you agree to receive a single text message from RWS with contact info. Message and data rates may apply.
-              </p>
-            </div>
 
-            <a 
-              href="/eric-dahlberg.vcf" 
-              download
-              className="block text-left pl-4 text-blue-500 hover:text-blue-600 mb-8"
-            >
-              → Download vCard
-            </a>
+              <a 
+                href="https://recwatersolutions.com/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-48 px-4 py-2 rounded-lg bg-white hover:bg-gray-50 border border-gray-200 flex items-center justify-center active:bg-gray-100"
+                style={{ touchAction: 'manipulation' }}
+                onTouchStart={(e) => e.preventDefault()}
+              >
+                <img 
+                  src="/RWS-Logo-RGB.png"
+                  alt="RWS Website" 
+                  className="h-8 w-auto"
+                />
+              </a>
+
+              <a 
+                href="https://winesecrets.com/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-48 px-4 py-2 rounded-lg bg-white hover:bg-gray-50 border border-gray-200 flex items-center justify-center active:bg-gray-100"
+                style={{ touchAction: 'manipulation' }}
+                onTouchStart={(e) => e.preventDefault()}
+              >
+                <img 
+                  src="/WS Logo.png"
+                  alt="Winesecrets Website" 
+                  className="h-8 w-auto"
+                />
+              </a>
+            </div>
 
             <div className="border-t border-gray-200 my-8"></div>
 
@@ -176,40 +210,15 @@ function AppContent() {
                 setCurrentPage(2);
                 navigate('/painpoints');
               }}
-              className="w-full p-3 rounded-lg text-white hover:opacity-90"
-              style={{ backgroundColor: '#4CAF50' }}
+              className="w-full p-3 rounded-lg text-white hover:opacity-90 active:opacity-80"
+              style={{ 
+                backgroundColor: '#4CAF50',
+                touchAction: 'manipulation'
+              }}
+              onTouchStart={(e) => e.preventDefault()}
             >
               I changed my mind, let me see if I need a FREE water risk assessment
             </button>
-
-            <div className="border-t border-gray-200 my-8"></div>
-
-            <div className="flex justify-center space-x-8">
-              <a 
-                href="https://recwatersolutions.com/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="px-6 py-3 rounded-lg bg-white hover:bg-gray-50 border border-gray-200"
-              >
-                <img 
-                  src="/RWS-Logo-RGB.png"
-                  alt="RWS Website" 
-                  className="h-8 w-auto"
-                />
-              </a>
-              <a 
-                href="https://winesecrets.com/"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="px-6 py-3 rounded-lg bg-white hover:bg-gray-50 border border-gray-200"
-              >
-                <img 
-                  src="/WS Logo.png"
-                  alt="Winesecrets Website" 
-                  className="h-8 w-auto"
-                />
-              </a>
-            </div>
           </div>
         </div>
       </div>
@@ -222,13 +231,25 @@ function AppContent() {
 
   const InfoPopup = () => (
     <div 
-      className="absolute left-1/2 transform -translate-x-1/2 bg-white rounded-lg shadow-lg p-4 z-50 w-64"
+      className="absolute bg-white rounded-lg shadow-lg p-4 z-50"
       style={{ 
-        top: '100%',
-        marginTop: '8px',
-        width: '300px'
+        width: '300px',
+        right: '-320px',
+        top: '-100px',
       }}
+      onTouchStart={(e) => e.stopPropagation()}
+      onClick={(e) => e.stopPropagation()}
     >
+      <div 
+        className="absolute top-1/2 -left-2 transform -translate-y-1/2"
+        style={{
+          width: '0',
+          height: '0',
+          borderTop: '8px solid transparent',
+          borderBottom: '8px solid transparent',
+          borderRight: '8px solid white'
+        }}
+      ></div>
       <div className="flex justify-center mb-3">
         <img 
           src="/RWS-Logo-RGB.png"
@@ -236,19 +257,9 @@ function AppContent() {
           className="h-10 w-auto"
         />
       </div>
-      <p className="text-sm text-gray-600 leading-relaxed">
-        RWS, with 20+ years of expertise, transforms water uncertainty into security with advanced filtration and custom recovery plans that maximize reuse, recycling, and efficiency for your facility.
+      <p className="text-sm text-gray-700 leading-relaxed">
+        With 20+ years of expertise, RWS transforms water uncertainty into security with advanced filtration and custom recovery plans that maximize reuse, recycling, and efficiency for your facility.
       </p>
-      <div 
-        className="absolute -top-2 left-1/2 transform -translate-x-1/2"
-        style={{
-          width: '0',
-          height: '0',
-          borderLeft: '8px solid transparent',
-          borderRight: '8px solid transparent',
-          borderBottom: '8px solid white'
-        }}
-      ></div>
     </div>
   );
 
@@ -337,36 +348,38 @@ function AppContent() {
     window.location.href = `https://recovered-water-solutions.uw.r.appspot.com/?${params.toString()}`;
   };
 
+  // Add touch-friendly button styles
+  const buttonBaseStyles = "w-full p-2 rounded-lg transition-all duration-150 touch-manipulation";
+  const primaryButtonStyles = `${buttonBaseStyles} text-white font-semibold hover:opacity-90 active:opacity-80`;
+  const secondaryButtonStyles = `${buttonBaseStyles} text-sm text-gray-500 hover:bg-gray-50 active:bg-gray-100`;
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-200 to-white p-6">
       {['/signup', '/confirmation', '/painpoints'].includes(window.location.pathname) ? (
         <>
           {window.location.pathname === '/painpoints' ? (
             <>
-              <div className="max-w-md mx-auto mb-6">
-                <img 
-                  src="/RWS-Logo-RGB.png" 
-                  alt="RWS Logo" 
-                  className="h-16 w-auto mx-auto"
+              <LogoWithLink />
+              <div className="max-w-md mx-auto bg-blue-50 rounded-xl shadow-lg p-8 space-y-6">
+                <PainPoints 
+                  selectedOptions={selectedOptions}
+                  setSelectedOptions={setSelectedOptions}
+                  onContinue={() => navigate('/signup?fromPainPoints=true')}
                 />
               </div>
-              <div className="max-w-md mx-auto bg-blue-50 rounded-xl shadow-lg p-8">
-                <Routes>
-                  <Route path="/painpoints" element={
-                    <PainPoints 
-                      selectedOptions={selectedOptions}
-                      setSelectedOptions={setSelectedOptions}
-                      onContinue={() => navigate('/signup?fromPainPoints=true')}
-                    />
-                  } />
-                </Routes>
+              <div className="max-w-md mx-auto mt-8 text-center">
+                <img 
+                  src="/Unified-Symposium-Logo.svg" 
+                  alt="Unified Symposium Logo" 
+                  className="h-20 w-auto mx-auto mb-2"
+                />
+                <p className="text-[#b72956] text-xl font-semibold mt-2">
+                  Booth 1222 (Winesecrets)
+                </p>
               </div>
             </>
           ) : (
-            <Routes>
-              <Route path="/signup" element={<Signup isDirectSignup={window.location.search !== '?fromPainPoints=true'} />} />
-              <Route path="/confirmation" element={<Confirmation />} />
-            </Routes>
+            <Outlet />
           )}
         </>
       ) : (
@@ -380,28 +393,24 @@ function AppContent() {
           </div>
           
           <div className="max-w-md mx-auto bg-blue-50 rounded-xl shadow-lg p-8">
-            {window.location.pathname === '/' && (
-              <>
-                {currentPage === 1 && !showStayConnected && <PageOne />}
-                {currentPage === 2 && !showStayConnected && <PageTwo />}
-                {showStayConnected && <StayConnectedPage />}
-                {showPhoneInput && <PhoneInputModal />}
-              </>
-            )}
+            {currentPage === 1 && !showStayConnected && <PageOne />}
+            {currentPage === 2 && !showStayConnected && <PageTwo />}
+            {showStayConnected && <StayConnectedPage />}
+            {showPhoneInput && <PhoneInputModal />}
+          </div>
+          
+          <div className="max-w-md mx-auto mt-8 text-center">
+            <img 
+              src="/Unified-Symposium-Logo.svg" 
+              alt="Unified Symposium Logo" 
+              className="h-20 w-auto mx-auto mb-2"
+            />
+            <p className="text-[#b72956] text-xl font-semibold mt-2">
+              Booth 1222 (Winesecrets)
+            </p>
           </div>
         </>
       )}
-  
-      <div className="max-w-md mx-auto mt-8 text-center">
-        <img 
-          src="/Unified-Symposium-Logo.svg" 
-          alt="Unified Symposium Logo" 
-          className="h-20 w-auto mx-auto mb-2"
-        />
-        <p className="text-[#b72956] text-xl font-semibold mt-2">
-          Booth 1222 (Winesecrets)
-        </p>
-      </div>
     </div>
   );
 }
@@ -409,7 +418,13 @@ function AppContent() {
 function App() {
   return (
     <Router>
-      <AppContent />
+      <Routes>
+        <Route path="/" element={<AppContent />}>
+          <Route path="painpoints" element={<PainPoints />} />
+          <Route path="signup" element={<Signup />} />
+          <Route path="confirmation" element={<Confirmation />} />
+        </Route>
+      </Routes>
     </Router>
   );
 }
