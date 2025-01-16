@@ -12,6 +12,7 @@ function Signup({ isDirectSignup }) {
     facility: ''
   });
   const [errors, setErrors] = useState({});
+  const [loading, setLoading] = useState(false);
 
   const validateEmail = (email) => {
     const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -75,8 +76,10 @@ function Signup({ isDirectSignup }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+    setLoading(true);
+
     if (!validateForm()) {
+      setLoading(false);
       return;
     }
 
@@ -158,6 +161,8 @@ function Signup({ isDirectSignup }) {
       console.error('❌ Error:', error);
       // Don't clear localStorage on error
       alert('There was an error submitting the form. Please try again.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -289,11 +294,12 @@ function Signup({ isDirectSignup }) {
 
           <button
             type="submit"
-            className="w-full bg-blue-500 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            disabled={loading}
+            className={`w-full p-3 rounded-lg ${loading ? 'bg-gray-400' : 'bg-blue-500'} text-white`}
             style={{ touchAction: 'manipulation' }}
             onTouchStart={(e) => e.preventDefault()}
           >
-            Submit
+            {loading ? 'Submitting...' : 'Submit'}
           </button>
         </form>
       </div>
